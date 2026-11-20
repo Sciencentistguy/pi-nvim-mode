@@ -1,0 +1,19 @@
+{
+  "name": "pi-nvim-mode",
+  "version": "0.1.0",
+  "description": "Vim mode for pi's prompt editor, powered by an embedded, isolated Neovim",
+  "type": "module",
+  "keywords": ["pi-package", "pi-extension", "neovim", "vim"],
+  "files": ["src"],
+  "pi": {
+    "extensions": ["./src/index.ts"]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --test 'test/*.test.ts'"
+  }
+}
