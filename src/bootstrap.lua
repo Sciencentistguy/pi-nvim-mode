@@ -113,21 +113,22 @@ local MAX_MATCHES = 200
 
 local function search_ranges(pattern, lines)
 	if pattern == nil or pattern == "" then return {} end
-	local ok, re = pcall(vim.regex, (o.ignorecase and "\\c" or "") .. pattern)
+	-- matchstrlist finds every match with anchors and lookbehind evaluated against the whole line.
+	local ok, found = pcall(fn.matchstrlist, lines, (o.ignorecase and "\\c" or "") .. pattern)
 	if not ok then return {} end
 	local out = {}
-	for i, line in ipairs(lines) do
-		local start = 0
-		while start <= #line and #out < MAX_MATCHES do
-			local s, e = re:match_str(line:sub(start + 1))
-			if not s then break end
-			s, e = s + start, e + start
-			if e > s then out[#out + 1] = { i - 1, utf16(line, s), utf16(line, e) } end
-			start = e > s and e or e + 1
+	for _, m in ipairs(found) do
+		if #out >= MAX_MATCHES then break end
+		if #m.text > 0 then
+			local line = lines[m.idx + 1]
+			out[#out + 1] = { m.idx, utf16(line, m.byteidx), utf16(line, m.byteidx + #m.text) }
 		end
 	end
 	return out
 end
+
+-- Select mode (s, S, CTRL-S) highlights like the matching visual mode.
+local SELECT_AS_VISUAL = { s = "v", S = "V", ["\19"] = "\22" }
 
 local last_tick = -1
 -- Monotonic counter so pi can discard states that arrive out of order.
@@ -158,8 +159,9 @@ function M.state(force_lines)
 	end
 
 	local m = mode.mode:sub(1, 1)
-	if m == "v" or m == "V" or m == "\22" then
-		state.visual = visual_ranges(mode.mode:sub(1, 1), lines)
+	local region_type = SELECT_AS_VISUAL[m] or m
+	if region_type == "v" or region_type == "V" or region_type == "\22" then
+		state.visual = visual_ranges(region_type, lines)
 	end
 
 	local search
