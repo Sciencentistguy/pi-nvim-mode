@@ -257,6 +257,11 @@ export class NvimEditor extends CustomEditor {
 		this.provider = provider;
 	}
 
+	/** pi's base getter looks at its own (unused) autocomplete state, so the menu would lose keys to viewport scrolling. */
+	override get capturesViewportInput(): boolean {
+		return this.fallback ? super.capturesViewportInput : this.completion !== undefined;
+	}
+
 	override isShowingAutocomplete(): boolean {
 		return this.fallback ? super.isShowingAutocomplete() : this.completion !== undefined;
 	}
