@@ -16,7 +16,7 @@ import {
 	visibleWidth,
 } from "@earendil-works/pi-tui";
 import type { NvimModeConfig } from "./config.ts";
-import { toNvimInput } from "./keys.ts";
+import { legacyAltChar, toNvimInput } from "./keys.ts";
 import { log, NvimSession, type Range } from "./session.ts";
 
 export interface NvimEditorDeps {
@@ -325,6 +325,15 @@ export class NvimEditor extends CustomEditor {
 
 	private async dispatch(data: string): Promise<void> {
 		this.session.clearMessage();
+
+		// Esc followed quickly by a key looks like Alt+key. Unless the user mapped that Alt key,
+		// they meant the two keys separately (e.g. `Esc` then `a`).
+		const alt = legacyAltChar(data);
+		if (alt !== undefined && !(await this.session.hasAltMapping(alt))) {
+			await this.dispatch("\x1b");
+			await this.dispatch(alt);
+			return;
+		}
 
 		if (!this.needsSync(data)) {
 			if (this.onExtensionShortcut?.(data)) return;

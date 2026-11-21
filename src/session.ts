@@ -134,6 +134,8 @@ export class NvimSession {
 
 	private start(lines: string[], insert: boolean): void {
 		this.startedAt = Date.now();
+		// Until nvim answers (slow on some machines) show the mode it is about to enter.
+		this.state = { ...this.state, mode: insert ? "i" : "n" };
 		this.seq = 0;
 		this.pendingEdits = 0;
 		const rpc = new NvimRpc({
@@ -329,6 +331,13 @@ export class NvimSession {
 	/** Run Lua in the embedded nvim and return its result. */
 	exec<T = unknown>(code: string, args: unknown[] = []): Promise<T | undefined> {
 		return this.lua<T>(code, args);
+	}
+
+	/** Whether `<M-key>` has a mapping in nvim's current mode. */
+	async hasAltMapping(key: string): Promise<boolean> {
+		const lhs = key === "<" ? "<M-lt>" : `<M-${key}>`;
+		const mapped = await this.lua<boolean>("return PiNvimMode.has_mapping(...)", [lhs]);
+		return mapped ?? false;
 	}
 
 	input(keys: string): void {

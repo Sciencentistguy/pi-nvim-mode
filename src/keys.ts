@@ -74,6 +74,17 @@ export function keyIdToNvim(id: string): string | undefined {
 }
 
 /**
+ * The character of a legacy Alt+<char> encoding (ESC followed by one printable character).
+ * Terminals send the same bytes when Esc and a key arrive in one read, which happens whenever
+ * the machine is slow enough to batch them, so the two cannot be told apart.
+ */
+export function legacyAltChar(data: string): string | undefined {
+	if (data.length < 2 || !data.startsWith("\x1b")) return undefined;
+	const ch = data.slice(1);
+	return isPrintableText(ch) && [...ch].length === 1 ? ch : undefined;
+}
+
+/**
  * Translate raw terminal input into nvim_input key notation.
  * Returns undefined for input that has no sensible nvim equivalent.
  */
@@ -86,8 +97,8 @@ export function toNvimInput(data: string): string | undefined {
 	if (id) return keyIdToNvim(id);
 
 	// Legacy Alt+<char> encoding: ESC followed by a printable character.
-	if (data.length >= 2 && data.startsWith("\x1b") && isPrintableText(data.slice(1)) && [...data.slice(1)].length === 1) {
-		const ch = data.slice(1);
+	const ch = legacyAltChar(data);
+	if (ch !== undefined) {
 		return `<M-${ch === "<" ? "lt" : ch}>`;
 	}
 	return undefined;

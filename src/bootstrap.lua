@@ -238,6 +238,14 @@ function M.start_insert(eol)
 	api.nvim_feedkeys(api.nvim_replace_termcodes("<C-\\><C-n>" .. key, true, false, true), "n", false)
 end
 
+-- Whether `lhs` is mapped in the mode nvim is currently in.
+local MAP_MODES = { n = "n", i = "i", R = "i", v = "x", V = "x", ["\22"] = "x", s = "s", S = "s", ["\19"] = "s", c = "c", no = "o" }
+function M.has_mapping(lhs)
+	local mode = api.nvim_get_mode().mode
+	local short = MAP_MODES[mode:sub(1, 2)] or MAP_MODES[mode:sub(1, 1)]
+	return short ~= nil and fn.maparg(lhs, short) ~= ""
+end
+
 -- Replace a range of lines in place (keeps undo granularity small for completions).
 function M.splice(first, last, lines, row, col)
 	api.nvim_buf_set_lines(buf, first, last, false, lines)
