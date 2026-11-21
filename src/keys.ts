@@ -26,6 +26,11 @@ const SPECIAL: Record<string, string> = {
 
 const MODIFIERS: Record<string, string> = { ctrl: "C", alt: "M", shift: "S", super: "D" };
 
+/** Notation for Alt+<char> (a single printable character), e.g. `<M-a>`, `<M-Space>`. */
+export function altLhs(ch: string): string {
+	return `<M-${ch === " " ? "Space" : (SPECIAL[ch] ?? ch)}>`;
+}
+
 /** Escape literal text for nvim_input, where `<` starts a key code. */
 export function escapeLiteral(text: string): string {
 	return text.replaceAll("<", "<lt>");
@@ -99,7 +104,7 @@ export function toNvimInput(data: string): string | undefined {
 	// Legacy Alt+<char> encoding: ESC followed by a printable character.
 	const ch = legacyAltChar(data);
 	if (ch !== undefined) {
-		return `<M-${ch === "<" ? "lt" : ch}>`;
+		return altLhs(ch);
 	}
 	return undefined;
 }

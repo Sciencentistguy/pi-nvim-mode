@@ -1,5 +1,6 @@
 import { appendFileSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { altLhs } from "./keys.ts";
 import { NvimRpc } from "./rpc.ts";
 
 const BOOTSTRAP = readFileSync(fileURLToPath(new URL("./bootstrap.lua", import.meta.url)), "utf8");
@@ -181,9 +182,10 @@ export class NvimSession {
 
 	private call<T = unknown>(method: string, params: unknown[]): Promise<T | undefined> {
 		log("request", method, method === "nvim_exec_lua" ? [String(params[0]).slice(0, 60), params[1]] : params);
-		return this.rpc.request<T>(method, params).catch((err: Error) => {
+		const rpc = this.rpc;
+		return rpc.request<T>(method, params).catch((err: Error) => {
 			log("error", method, err.message);
-			if (!this.rpc.isClosed) this.showMessage(err.message, true);
+			if (!rpc.isClosed) this.showMessage(err.message, true);
 			return undefined;
 		});
 	}
@@ -191,11 +193,12 @@ export class NvimSession {
 	/** Like call(), but `onResult` runs synchronously in wire order with notifications. */
 	private callSync<T>(method: string, params: unknown[], onResult: (result: T) => void, onDone?: () => void): void {
 		log("request", method, method === "nvim_exec_lua" ? [String(params[0]).slice(0, 60), params[1]] : params);
-		this.rpc.send(method, params, (err, result) => {
+		const rpc = this.rpc;
+		rpc.send(method, params, (err, result) => {
 			onDone?.();
 			if (err) {
 				log("error", method, err.message);
-				if (!this.rpc.isClosed) this.showMessage(err.message, true);
+				if (!rpc.isClosed) this.showMessage(err.message, true);
 			} else if (result) {
 				onResult(result as T);
 			}
@@ -335,7 +338,7 @@ export class NvimSession {
 
 	/** Whether `<M-key>` has a mapping in nvim's current mode. */
 	async hasAltMapping(key: string): Promise<boolean> {
-		const lhs = key === "<" ? "<M-lt>" : `<M-${key}>`;
+		const lhs = altLhs(key);
 		const mapped = await this.lua<boolean>("return PiNvimMode.has_mapping(...)", [lhs]);
 		return mapped ?? false;
 	}
