@@ -486,10 +486,12 @@ export class NvimEditor extends CustomEditor {
 		}
 		if (matchesKey(data, "ctrl+n")) {
 			completion.list.handleInput("\x1b[B");
+			this.tui.requestRender();
 			return true;
 		}
 		if (matchesKey(data, "ctrl+p")) {
 			completion.list.handleInput("\x1b[A");
+			this.tui.requestRender();
 			return true;
 		}
 		if (
@@ -499,6 +501,7 @@ export class NvimEditor extends CustomEditor {
 			tui.matches(data, "tui.select.pageDown")
 		) {
 			completion.list.handleInput(data);
+			this.tui.requestRender();
 			return true;
 		}
 		const isTab = tui.matches(data, "tui.input.tab");
