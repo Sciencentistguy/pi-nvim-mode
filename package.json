@@ -2,6 +2,7 @@
   "name": "pi-nvim-mode",
   "version": "0.1.0",
   "description": "Vim mode for pi's prompt editor, powered by an embedded, isolated Neovim",
+  "license": "MPL-2.0",
   "type": "module",
   "keywords": ["pi-package", "pi-extension", "neovim", "vim"],
   "files": ["src"],
