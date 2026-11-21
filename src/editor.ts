@@ -441,6 +441,7 @@ export class NvimEditor extends CustomEditor {
 		const text = this.session.text.trim();
 		this.promptHistoryIndex = -1;
 		this.session.setText("", { resetUndo: true, insert: this.deps.config.startInInsert });
+		this.cancelCompletion();
 		this.scroll = 0;
 		this.emitChange();
 		this.onSubmit?.(text);
@@ -503,20 +504,23 @@ export class NvimEditor extends CustomEditor {
 				this.cancelCompletion();
 				return isTab;
 			}
-			await this.applyCompletion(item, completion.prefix);
-			// Choosing a slash command with Enter runs it, matching pi's own editor.
-			if (isConfirm && completion.prefix.startsWith("/")) await this.submitPrompt();
+			const changed = await this.applyCompletion(item, completion.prefix);
+			// Choosing a slash command with Enter runs it, matching pi's own editor. Confirming an
+			// argument that is already fully typed changes nothing, so Enter should send it.
+			if (isConfirm && (completion.prefix.startsWith("/") || !changed)) await this.submitPrompt();
 			return true;
 		}
 		return false;
 	}
 
-	private async applyCompletion(item: { value: string; label: string }, prefix: string): Promise<void> {
-		if (!this.provider) return;
+	/** Returns whether the buffer text changed. */
+	private async applyCompletion(item: { value: string; label: string }, prefix: string): Promise<boolean> {
+		if (!this.provider) return false;
 		this.cancelCompletion();
 		await this.session.refresh();
 		const { lines, row, col } = this.session.state;
 		const result = this.provider.applyCompletion(lines, row, col, item, prefix);
+		const changed = result.lines.join("\n") !== lines.join("\n");
 		let first = 0;
 		while (first < lines.length && first < result.lines.length && lines[first] === result.lines[first]) first++;
 		let tailOld = lines.length;
@@ -526,9 +530,13 @@ export class NvimEditor extends CustomEditor {
 			tailNew--;
 		}
 		this.session.splice(first, tailOld, result.lines.slice(first, tailNew), result.cursorLine, result.cursorCol);
-		// Completions change text without nvim seeing the keystrokes; don't immediately re-open the menu.
+		// Completions change text without nvim seeing the keystrokes; don't re-open the menu once
+		// nvim reports the edit (replies arrive in order, so refresh() returns after it).
+		await this.session.refresh();
+		this.cancelCompletion();
 		this.completionKey = this.snapshotKey();
 		this.emitChange();
+		return changed;
 	}
 
 	private snapshotKey(): string {
