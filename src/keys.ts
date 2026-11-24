@@ -74,6 +74,7 @@ export function keyIdToNvim(id: string): string | undefined {
 		name = base;
 	} else return undefined;
 
+	if (mods.length === 1 && mods[0] === "S" && base === "backspace") return "<BS>";
 	if (mods.length === 0) return `<${name}>`;
 	return `<${mods.join("-")}-${name}>`;
 }
@@ -95,7 +96,7 @@ export function legacyAltChar(data: string): string | undefined {
  */
 export function toNvimInput(data: string): string | undefined {
 	const kitty = decodeKittyPrintable(data);
-	if (kitty !== undefined) return escapeLiteral(kitty);
+	if (kitty !== undefined && isPrintableText(kitty)) return escapeLiteral(kitty);
 	if (isPrintableText(data)) return escapeLiteral(data);
 
 	const id = parseKey(data);
